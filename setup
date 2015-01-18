@@ -1,0 +1,32 @@
+#Experimental Setup for precentage, eccentricity and beam-allignment
+#
+
+ExpID   | perc  | ecce | beam |
+-------------------------------
+config01|   20  | 0.20 |   5  |
+config02|   20  | 0.20 |  25  |
+config03|   20  | 0.20 |  50  |
+config04|   20  | 0.50 |   5  |
+config05|   20  | 0.50 |  25  |
+config06|   20  | 0.50 |  50  |
+config07|   20  | 0.80 |   5  |
+config08|   20  | 0.80 |  25  |
+config09|   20  | 0.80 |  50  |
+config10|   50  | 0.20 |   5  |
+config11|   50  | 0.20 |  25  |
+config12|   50  | 0.20 |  50  |
+config13|   50  | 0.50 |   5  |
+config14|   50  | 0.50 |  25  |
+config15|   50  | 0.50 |  50  |
+config16|   50  | 0.80 |   5  |
+config17|   50  | 0.80 |  25  |
+config18|   50  | 0.80 |  50  |
+config19|   70  | 0.20 |   5  |
+config20|   70  | 0.20 |  25  |
+config21|   70  | 0.20 |  50  |
+config22|   70  | 0.50 |   5  |
+config23|   70  | 0.50 |  25  |
+config24|   70  | 0.50 |  50  |
+config25|   70  | 0.80 |   5  |
+config26|   70  | 0.80 |  25  |
+config27|   70  | 0.80 |  50  |
