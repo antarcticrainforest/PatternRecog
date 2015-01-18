@@ -1,0 +1,97 @@
+#This is the config file where all the non-fixed variables that are need for
+#the pattern detection are stored
+
+#In what folder is the netcdf-rain data stored
+#
+
+folder = $HOME/Data/CMORPH/netcdf/
+
+#Should an ensemle of all threshold setups be created?
+#
+ensemble = false
+
+#Where should the output go to
+#
+
+targetdir = $HOME/Data/PatternDetect/CMORPH/netcdf
+
+#Not only Precipitation but also the land-sea distribution is needed
+#Where is the land-sea mask stored?
+#
+
+slmfile = $HOME/Data/Cmorph_slm.nc
+
+#What is the leading string of the each precipitation-data file
+#The format should be Product-YYYY_MM_DD.nc
+
+head = Cmorph
+
+#How many km are the edges of the grid-boxes
+reso = 25
+
+#Now the thresholds are defined:
+#
+#1st what is the area threshold (meso-beta scale) this should be fixed
+
+area = 500
+
+#2nd what is the threshold for the eccentricity
+
+ecce = 0.2
+
+#3rd what is the threshold for the straight line variation in %
+
+beam = 10
+
+#4rd & last the threshold that is applied on the data to find patterns is based on 
+#percentiles, not on absolut values, which percentile should be used
+#
+
+perc = 70
+
+
+#The percentile data should be stored in a seperated file, where is that file
+#
+monmean = $HOME/Data/CMORPH/netcdf/Climatology/cmorph_MM.nc
+
+#The pattern detection can be more successfull when small islands are
+#erased from the slm-data should this be done
+#
+erase = False
+
+#What is the maximum size of islands that should be deleted (km^2)
+#
+
+size = 35000
+
+#How many boxes are representing the coastline (boxcounting)
+#
+scale = 5
+
+#What is the name of the precip variables
+
+varname = precip
+
+#What is the name of the longitude vector
+
+lon = lon
+
+#What is the name of the latitude vector
+
+lat = lat
+
+#What is the name of the time vector
+
+time = time
+
+#What is the unit of the precip data
+
+units = mm/3h
+
+#What is the your name
+
+name = Siegfried Huehnermoerder
+
+#What is your institution
+
+institution = Ministry of Non-sense science
