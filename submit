@@ -1,0 +1,203 @@
+#!/usr/bin/env python2
+####################################################
+####################################################
+#                 EDIT HERE                        #
+# The PBS header of the script that is submitted   #
+pbs="""
+#$ -S /bin/bash
+#$ -pe smp 1
+#$ -l h_vmem=4G
+#$ -l h_stack=128M
+#$ -l h_rt=10:00:00
+#$ -m abe
+#$ -M your@mail.edu
+#$ -cwd
+#
+"""
+#
+# The modules to be loaded and the path var's      #
+modules="""
+. /etc/profile
+module unload intel/2013.3
+module load python/2.7.5
+module load opencv/2.4.6.1
+module load hdf5/1.8.12
+module load netcdf-gcc/4.3.2
+#
+#Export all paths we need
+tmp=$(echo "$HOME/Software/lib/python2.7/site-packages:$PYTHONPATH")
+tmp=$(echo "${tmp}:/opt/sw/python-2.7.5/lib/python2.7/site-packages/")
+export PYTHONPATH=${tmp}:$HOME/Programming
+#
+"""
+# The submit command for the batch system (qsub or llsubmit)
+submitcmd='qsub'
+
+##########################################################
+#########################################################
+# Example PBS cluster job submission in Python
+ 
+import time,os,string,stat,sys
+from datetime import datetime, timedelta as td
+from src.configdir import Config as Cfg
+
+# If you want to be emailed by the system, include these in job_string:
+#PBS -M your_email@address
+#PBS -m abe  # (a = abort, b = begin, e = end)
+
+
+python='/opt/sw/python-2.7.5/bin/python'
+if not os.path.isfile(python):
+    for path in os.environ["PATH"].split(":"):
+        if os.path.isfile(os.path.join(path,'python')):
+                python = os.path.join(path,'python')
+
+# Loop over 25 configurations
+conf,num =None,30
+years=[]
+out=os.path.join(os.path.abspath(os.path.dirname(__file__)),'jobs')
+
+helpstring='''submit v1.0 Martin Bergemann 13 Jan 2015
+Copyrith (c) 2013 through 2015, Martin Bergemann
+submit comes with ABSOLUTELY NO WARRANTY; for details type submit -w
+
+
+
+Usage:
+submit [options] DATE1 DATE2
+
+
+Options:
+       --num=30: the maximal value for paralell jobs to be submitted
+                 default is 30
+       --config: if an threshold-ensemble should be created the the config code
+                 for the threshold setup that is defined in the setup file in
+                 the source code directory. Multiple configurations are
+                 seperated with , (--config=config01,config02,...,configNN)
+                 default is None
+      --out:     the directory name where the std-out and std-err should be
+                 written to
+                 default %s
+      --w:       print the copying policy
+
+Dates:
+      The dates representing the start and end dates for the pattern
+      recognition the format of the dates must be YYYY-MM-DD
+
+Example:
+    The comand
+    submit --num=3 --config=config01,config02,config03 1998-01-01 2012-01-01
+    submits maximal 3 jobs at once to a linux cluster creating an threshold
+    ensembl for the threshold setups config1-3 and the first date of 01.Jan 98
+    and the last date of 01.Jan 2012
+'''%out
+if len(sys.argv) < 2:
+    sys.exit(helpstring)
+for arg in sys.argv[1:]:
+    if arg.lower().startswith('--h') or arg.lower().startswith('-h'):
+        sys.exit(helpstring)
+    elif arg.lower().startswith('-w') or arg.lower().startswith('-w'):
+        l=open('LICENSE').read().replace('XXX','submit')
+        sys.stdout.flush()
+        sys.stdout.write(l+'\n')
+        sys.exit()
+    elif arg.lower().startswith('--out') or arg.lower().startswith('-o'):
+        out=arg.split('=')[-1]
+    elif arg.lower().startswith('--n') or arg.lower().startswith('-n'):
+        num=int(arg.split('=')[-1])
+    elif arg.lower().startswith('--con') or arg.lower().startswith('-c'):
+        conf=arg.split('=')[-1].split(',')
+    else:
+        years.append(arg)
+if  len(years) == 2:
+    fyear = datetime.strptime(years[0],'%Y-%m-%d')
+    lyear = datetime.strptime(years[-1],'%Y-%m-%d')
+else:
+    sys.exit('Give start and end date in YYYY-MM-DD format')
+
+C=Cfg(os.path.abspath(os.path.join(os.path.dirname(__file__),'config')))
+
+
+if not os.path.isdir(os.path.join(out,'error')):
+    os.makedirs(os.path.join(out,'error'))
+if not os.path.isdir(os.path.join(out,'output')):
+    os.makedirs(os.path.join(out,'output'))
+try:
+    conflen = len(conf)
+except TypeError:
+    conflen = 0
+if conflen > 1:
+    itterator = conf
+    #An ensemble is created the num argument will be disregarded
+else:
+    #Get the date range
+    delta = (lyear - fyear)
+    dates = [fyear + td(days=i) for i in xrange(delta.days + 1)]
+    if len(dates) <= num:
+        itterator = [(i,i) for i in  dates]
+        
+    else:
+        chunks = len(dates)/num
+    
+
+        itterator = [(i[0],i[-1]) for i in zip(*[iter(dates)]*chunks)]
+        while len(itterator) > num:
+            num -= 1
+            chunks = len(dates)/(num)
+            itterator = [(i[0],i[-1]) for i in zip(*[iter(dates)]*chunks)]
+
+if conflen == 1:
+    conf = conf[0]
+for i in itterator:
+    # Open a pipe to the qsub command.
+    #Edit: opening a STDIN pipe with os.popen and pip
+    #the entry to qsub doesn't work here 
+    #Therefore a tmp-script is created that will be executed
+    script = os.path.join(os.environ['HOME'],'tmp.sh')
+    output = open(script,'w')
+ 
+    # Customize your options here
+    if conflen > 1:
+        Config='"%s %s %s"' %(fyear.strftime('%Y-%m-%d'),\
+                lyear.strftime('%Y-%m-%d'),i)
+    else:
+        Config='"%s %s %s"' %(i[0].strftime('%Y-%m-%d'),\
+                i[1].strftime('%Y-%m-%d'),conf)
+
+    
+    job_name = "PatternRecog-%s-%s" % (C.head,Config.replace(' ','_')\
+            .replace('"',''))
+    command =os.path.abspath(\
+            os.path.join(os.path.dirname(__file__),'Pattern'))
+    sys.stdout.flush()
+    sys.stdout.write('Submitting script for %s %s\n'\
+            %(command,Config.replace('"','')))
+ 
+    job_string = """#!/bin/bash
+#
+%s
+#$ -o %s/output/%s.out
+#$ -e %s/error/%s.err
+#$ -N %s
+#Make module available
+%s
+export PYTHONDONTWRITEBYTECODE=True
+#Run the Script
+#
+config=%s
+script="%s"
+cmd="$script $config"
+$cmd
+"""   % (pbs, out, job_name,out, job_name,job_name,modules,Config,\
+        python+' '+command)
+    #Write job_string to script and close it
+    output.write(job_string)
+    output.close()
+    #Make script executables
+    os.chmod(script, os.stat(script).st_mode | stat.S_IEXEC)
+    #Send script to cluster with qsub and delete it
+    os.system('%s '+script+' 1> /dev/null' %submitcmd)
+    
+    os.remove(script)
+    # Print your job and the response to the screen
+    time.sleep(0.1)
