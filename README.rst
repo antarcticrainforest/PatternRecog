@@ -43,7 +43,7 @@ On Arch 2012.07.15 and later::
 
 On Mac OS X 10.6 and later (via port reposetory system)::
    
-   port install py2-numpy py2-scipy py2-netcdf4 opencv
+   port install py27-numpy py27-scipy py27-netcdf4 opencv +python27
 
 Building
 ========
