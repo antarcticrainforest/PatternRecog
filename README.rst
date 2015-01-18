@@ -45,7 +45,7 @@ On Mac OS X 10.6 and later (via port reposetory system)::
    
    port install py27-numpy py27-scipy py27-netcdf4 opencv +python27
 
-The code expects ``daily`` rainfll input files in netcdf format. As long as it
+The code expects ``daily`` rainfall input files in netcdf format. As long as it
 is sub-daily the temporal resolution doesn't matter. Also any spatial resolution
 can be used to run the code. 
 
