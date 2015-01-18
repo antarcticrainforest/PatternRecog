@@ -19,7 +19,7 @@ It includes these modules and configuration files:
 Prerequisites
 =============
 
-`Python 2.7 Release <http://www.python.org/>`_ is need to run the code.
+`Python 2.7 Release <http://www.python.org/>`_ is needed to run the code.
 
 Additionally the following python packages must be installed on the system
 to run the pattern recognition:
@@ -45,6 +45,27 @@ On Mac OS X 10.6 and later (via port reposetory system)::
    
    port install py27-numpy py27-scipy py27-netcdf4 opencv +python27
 
+The code expects ``daily`` rainfll input files in netcdf format. As long as it
+is sub-daily the temporal resolution doesn't matter. Also any spatial resolution
+can be used to run the code. 
+
+You will also need to supply a land-sea mask in netcdf format. 
+This mask has to have the same spatial resolution as the rainfall 
+estimates and is supposed to be a 2D-array (latlon).
+
+If you wish to create an ensemble of different threshold setups you might want
+to take a look into the ``setup`` file. Here all possible threshold combinations
+are defined. You can change, delete or add definitions. But note that the names
+of each definition should start with ``config`` followed by a 2 digit integer 
+such as config01.
+
+For the application of the rainfall threshold a climatology of monthly mean rain 
+data is needed. Therefore a multi year monthly mean in a netcdf file should be
+created form the rainfall data. Note that unit MUST be the same as for the 
+rainfall estimates. For instance we are looking for a monthly average of 3hly
+rainfall data and not for a monthly average of daily rainfall data.
+
+
 Building
 ========
 Additional building should not be necessary
@@ -56,34 +77,13 @@ The pattern recognition can be used in two ways::
  * in single threading mode
  * in multithreading mode via parallel batch system (pbs)
 
-The code expects ``daily`` input files in netcdf format. As long as it is 
-sub-daily the temporal resolution doesn't matter. Also any spatial resolution
-can be used to run the code. 
-
-You will also need to supply a land-sea mask in netcdf format. 
-This mask has to have the same temporal resolution as the rainfall 
-estimates and is supposed to be a 2D-array (latlon).
-
-If you wish to create an ensemble of different threshold setups you might want
-to take a look into the ``setup`` file. Here all possible threshold combinations
-are defined. You can change, delete or add definitions. But note the the names
-of each definition should start with ``config`` followed by a 2 digit integer 
-such as config01.
-
-For the application of the rainfall threshold a climatology monthly mean rain 
-data is needed. Therefore a multi year monthly mean in a netcdf file should be
-created form the rainfall data. Note that unit MUST be the same as for the 
-rainfall estimates. For instance we are looking for a monthly average of 3hly
-rainfall data and not for a monthly average of daily rainfall data.
-
-
 Regardless of the mode you are running the code you will have to edit the file
-config. This file provides all necessary parameters to run the code the
+config. This file provides all necessary parameters to run the code. The
 following variables are set:
   
- * folder = the directory of the rainfall estimates in
-   the data has to the following structure: ``folder/YYYY/product-YYYY_MM_DD.nc``
-   if folder is set to ``/srv/data/rain/`` and the rainfall product is
+ * folder = the directory of the rainfall estimates.
+   The data must have the following structure: ``folder/YYYY/product-YYYY_MM_DD.nc``.
+   If folder is set to ``/srv/data/rain/`` and the rainfall product is
    called ``Cmoprh`` the data is expected to have the following structure:
    ``/mnt/data/rain/1998/Cmorph-1998_01_01.nc`` for the 01. Jan 1998.
 
@@ -91,20 +91,20 @@ following variables are set:
    name
  * targetdir = the directory where the pattern recognition data is stored
  * slmfile   = the filename of the land-sea mask in netcdf-format
- * ensemble  = should a threshold setup ensemble be created (boolean)
+ * ensemble  = should be a threshold setup ensemble be created (boolean)
  * reso      = the spatial resolution of the data in km
  * area      = the threshold that is supposed to be meso-scale 
    usually 500 km but you can change it.
  * ecce      = the threshold for eccentricity (see publication for details)
  * beam      = the threshold for the straight length variation
  * perc      = the threshold for the rain intensity in percentiles
- * If you choose to create a threshold ensemble the variables ecce, beam, prec
+ * NOTE: If you choose to create a threshold ensemble the variables ecce, beam, prec
    have no effect.
  * monmean   = netcdf file where a climatology for monthly mean rainfall data
    is stored.
  * erase      = The pattern detection can operate more successfully when small 
-   islands are erased from the slm-data should this be done (boolean). Note that
-   this feature is available but not very well tested
+   islands are erased from the slm-data.  Should this be done (boolean). 
+   Note: tha  this feature is available but not very well tested
  * size       = If erase is set to true what is the maximum size of 
    islands that should be deleted (km^2)
  * scale     = how many boxes representing the coastal area (boxcounting)
@@ -117,15 +117,17 @@ following variables are set:
  * institution = the name of your institution
 
 The module that reads the configuration is written in a way that you can add
-any variable you want to the config file. It simply have to have the following
+any variable you want to the config file. It simply has to have the following
 structure::
-key = value
+
+ key = value
 
 Running in the single mode
 --------------------------
 If you want to run the pattern recognition in single processing mode simply run
 the Pattern script with the following command line options::
-Pattern FirstDate LastDate configXX
+
+ Pattern FirstDate LastDate configXX
 
 Where FirstDate is the starting data and LastData the last date. Note that the 
 dates have to be in YYYY-MM-DD format. 
@@ -154,7 +156,7 @@ For more information run::
 
 Running in paralell mode (PBS)
 ------------------------------
-It is also possible to set several pattern recognition jobs to a Linux cluster
+It is also possible to send several pattern recognition jobs to a Linux cluster
 to speed up the process of the recognition.
 
 In general there are two scenarios:
@@ -179,8 +181,13 @@ Please type::
 
    submit --help
 
-For more options like the maximum number of jobs that are submitted to the 
+to get more info like the maximum number of jobs that are submitted to the 
 linux cluster.
+
+
+If you want to change the header string of the PBS script or change the 
+submit command (e.g. to llsubmit) please edit the source-code of submit. 
+Header and submit command are defined in the very beginning of the script.
 
 
 Testing
