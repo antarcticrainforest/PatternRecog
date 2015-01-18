@@ -1,0 +1,387 @@
+#!/usr/bin/env python2
+'''
+Created on May 31, 2013
+
+@author: Martin Bergemann
+
+@institution: Monash University School of Mathemetics
+
+@description: This python module should do the following:
+    Test all implementations concerning the Pattern Recognition
+'''
+import os,sys,string
+
+from src.configdir import Config
+from netCDF4 import num2date,date2num,date2index
+from netCDF4 import Dataset as nc
+import cv2,calendar
+from datetime import datetime,timedelta as td
+from src.detect import coastline
+import numpy as np
+from src.Find.Lines import etime
+from src.Fractals.BoxCount import Box
+from src.Find.Lines import Lines,Info
+from scipy.interpolate import InterpolatedUnivariateSpline as ius
+from src.Find.Geometry import Geometry
+def recog(coast,lat,lon,unit,geo,thresh=0,perc=None,product='Cmorph'\
+        ,targetdir="/Users/bergem/Data/PatternDetect/CMORPH/",mask=None,\
+        override=False):
+    """
+    Function to provide all data that are needed for the Find.Geometry class
+    
+    Variables:
+        coast (tuple) : tuple that contains the 3 nd array's about coastal
+                        information
+        lat  (nd-array) : 1-d array about the latitudes
+        lon  (nd-array) : 1-d array about the longitudes
+        unit (str-object): the time units
+        geo (Finds.Geometry object) : geometry object that provides all
+                                        functions needed for the recognition
+        perc (float-object) : the threshold (in percent) that is applied before
+                                the recognition
+        product (str-object) : the name of the satellite rainfall-estimates
+        targetdir (str-object): the directory of the pattern recognition data
+    
+    """
+    #Construct the file-string of the of the string
+    target=os.path.join(targetdir,product)
+    target=target+"Pattern-%s.nc" %(num2date(f.variables['time'][0],unit)\
+            .strftime("%Y_%m_%d"))
+
+    #There is a bug in the netCDF4 lib for MacOs therefore check if we are on 
+    #OSX and if file 'target' exist
+    if sys.platform == 'darwin' and os.path.isfile(target):
+        if override:
+            os.remove(target)
+        else:
+            tmp=os.path.join(targetdir,product)
+            #get the next month to be processed
+            m=int(num2date(f.variables[C.time][0],unit).strftime('%m'))
+            #and the year
+            y=int(num2date(f.variables[C.time][0],unit).strftime('%Y'))
+            #and the day
+            d=int(num2date(f.variables[C.time][0],unit).strftime('%d'))
+
+            if m == 12:
+                m = 1
+                y += 1
+            else:
+                m +=1
+            tmp = tmp+'Pattern-%i_%02i_%02i.nc' %(y,m,d)
+            if os.path.isfile(tmp):
+                #File of this month an the next month excists
+                #We don't have to do anything
+                del y,m,d,tmp
+                return
+            else:
+                #File of this month exists but not next month
+                #So the algorithm crashed in this month
+                del m,y,d,tmp
+                os.remove(target)
+    else:
+        if os.path.isfile(target) and os.stat(target).st_size/1024. >= 40:
+            return True
+    sys.stdout.flush()
+    sys.stdout.write('Creating %s .... '%target)
+    sys.stdout.flush()
+    #Open the file and create the meta-data
+    target=nc(target,'w',format='NETCDF4',diskless=True,persist=True)
+    target.format='NETCDF4'
+    target.insitution=C.institution
+    target.created=C.name
+    target.source='Pattern Detection on '+product+'-Data'
+    
+    ttmp,llat,llon=len(f.dimensions[C.time]),len(f.dimensions[C.lat]),\
+            len(f.dimensions[C.lon])
+    target.createDimension('time',None)
+    target.createDimension('lon',llon)
+    target.createDimension('lat',llat)
+    target.createDimension('lat_box',12)
+    target.createDimension('time_box',24)
+    
+    target.createVariable('time','f',('time',),zlib=True,complevel=9,\
+            least_significant_digit=4)
+    target.variables['time'][:]=f.variables['time'][:]
+    target.variables['time'].axis='T'
+    target.variables['time'].calendar='standard'
+    target.variables['time'].units=f.variables['time'].units
+    
+    target.createVariable('lon','f',('lon',),zlib=True,complevel=9,\
+            least_significant_digit=4)
+    target.createVariable('lat','f',('lat',),zlib=True,complevel=9,\
+            least_significant_digit=4)
+    
+    target.variables['lon'][:]=lon
+    target.variables['lat'][:]=lat
+    
+    target.variables['lat'].units='degrees_north'
+    target.variables['lat'].standard_name='latitude'
+    target.variables['lat'].axis='Y'
+    target.variables['lat'].long_name='latitude'
+    
+    target.variables['lon'].units='degrees_east'
+    target.variables['lon'].standard_name='longitude'
+    target.variables['lon'].axis='X'
+    target.variables['lon'].long_name='longitude'
+    
+    target.createVariable('lsp','f',('time','lat','lon'),zlib=True,complevel=9,\
+            least_significant_digit=4)
+    target.variables['lsp'].girdtype='lonlat'
+    target.variables['lsp'].code=999
+    target.variables['lsp'].long_name='detected coastal precipitation'
+    target.variables['lsp'].standard_name= 'detected_precipitation'
+    target.variables['lsp'].short_name='lsp'
+    target.variables['lsp'].units=C.units
+    
+    #Create the array where additional info is stored
+    info = Info()
+
+    for t in xrange(len(f.dimensions[C.time])) :
+        ary = f.variables[C.varname][t,:]
+        timestamp = num2date(f.variables[C.time][t],unit)
+        geo.hour = timestamp.hour
+        L=Lines(np.flipud(ary),thresh,coast,geo,mask=mask)
+        objects=L.getEllipse(info,ecce=C.ecce,area=C.area)
+        index=np.where(objects==1)
+        
+        objects[np.where(objects != 0)] = 1
+        #Write the precip out of the detected areas to the target-file
+        try:
+            target.variables['lsp'][t,]=np.flipud(objects)*ary.filled(0)
+        except AttributeError:
+            target.variables['lsp'][t,]=np.flipud(objects)*ary
+    #Close the file
+    target.close()
+    del objects,index,L.img,ary
+    sys.stdout.flush()
+    sys.stdout.write('ok\n')
+    sys.stdout.flush()
+def delte_islands(slm,size):
+    """
+        Function that deletes islands in a land-sea mask:
+            Vriables:
+                slm (nd-array) : the land-sea array
+            Returns:
+                nd-array : the new land-sea mask (without smaller islands)
+    """
+    Tmp=slm.astype(np.uint8)
+    cnt,hir=cv2.findContours(Tmp,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    hir = hir[0]
+    # Get the earth radius
+    r = 6371000.8/1000.
+    # Get the the angle of the edges
+    theta = 60 * np.pi/180.
+    #Calculate the surface 
+    O = 4 * np.pi * r**2 * np.sin(theta)
+    #How many km representing one gridbox-pixel
+    A = np.sqrt(O / (slm.shape[0]*slm.shape[1]))
+    #data-area and the actual ratio
+    size=Tmp.shape[1]*Tmp.shape[0]*(size/O)
+    for i,c in zip(hir,cnt):
+        if i[-1] == -1 and cv2.contourArea(c) < size:
+            #approx = cv2.approxPolyDP(c,0.1*cv2.arcLength(c,True),True)
+            #print cv2.cv.GetSize(self.img)
+            cv2.drawContours(slm,[c],0,0,-1)
+    return slm
+
+ 
+def main(config,fyear,lyear):
+    """ Main function to run the pattern recognition:
+
+        Variabels:
+            config (config-object) : the config-object that tells the algorithm
+            the infos that are needes
+            fyear (int-object) : first year to run algorithm
+            lyear (int-object) : last  year to run algorithm
+        Returns:
+            None
+    """
+
+
+    global C
+    C=config
+    #Define the dictionary where the monthly percentiles will be stored
+    p={}
+    #Get the land-sea-mask in form of
+    slm=nc(C.slmfile).variables['slm'][:]
+        #Create the coastline
+    if C.erase:
+        slm = delte_islands(slm,C.size)
+    mask = coastline(slm,smooth_radius=1)
+    #Make a new mask (-1=sea 1=land)
+    slm = np.ma.masked_where(slm==0,slm).filled(-1)
+    #Now slm has the following entries:
+    # 1: Land , -1: Water , 2: small-island land
+    
+    #Get the caostal area via inverse Box-counting
+    SbArea = Box(1-mask,scale=C.scale,mask=1).box
+    
+    coastArea = Box(1-mask,scale=2,mask=1).box
+    coastArea2 = Box(1-mask,scale=3,mask=1).box
+    
+    #Now get the monthly mean values to define the percentiles for the thresholds:
+    monmean=nc(C.monmean).variables[C.varname][:]
+    
+    #Now create the geometry object that provides all methods we need later
+    geo = Geometry(np.flipud(mask),np.flipud(slm),box=C.scale,ratio=C.reso,beam=\
+            C.beam)
+    
+    user1,sys1,chuser,chsys,real=os.times()
+    
+    #Create a date list
+    delta = lyear - fyear
+    dates = [fyear + td(days=i) for i in xrange(delta.days + 1)]
+    #Now loop through the dates
+    for date in dates:
+        global f
+        #Is the month already the percentiles dictionary
+        if date.month not in p.keys():
+            #If not add the percentiles to the dictionary
+            p[date.month]=np.histogram(monmean[date.month-1,:].ravel(),bins=99)[1]
+        #Ok we are almost there 
+        #Construct the filename of the precip-data
+        filename=os.path.join(C.folder,str(date.year),C.head+'-'\
+                +str(date.year)+'_'+str(date.month).zfill(2)+'_'\
+                +str(date.day).zfill(2)+'.nc')
+                #Open the file
+        filename = filename.replace('--','-').replace('__','_')
+        try:
+            f=nc(filename)
+        except RuntimeError:
+            f=nc(filename.replace('-','_'))
+        
+        #Get the meta data we need
+        lon=f.variables[C.lon][:]
+        lat=f.variables[C.lat][:]
+        time=f.variables[C.time][:]
+        unit=f.variables[C.time].units
+        
+        #Create the target-dir string
+        if not os.path.exists(C.targetdir):
+            os.makedirs(C.targetdir)
+        
+        #Ok let's go call the pattern-recognition
+        recog((np.flipud(SbArea),np.flipud(coastArea),np.flipud(slm),\
+                np.flipud(coastArea2)),lat,lon,unit,geo,product=C.head,\
+                mask=np.flipud(mask),thresh=p[date.month][C.perc-1],\
+                perc=C.perc,targetdir=C.targetdir)
+        
+        f.close()
+        del f
+def runtest():
+    global C
+    parent = os.path.dirname(__file__)
+    C=Config(os.path.join(os.path.dirname(__file__),'config'))
+    C.ecce=0.5
+    C.perc=0.5
+    C.beam=5
+    C.targetdir=os.path.join(parent,'.test')
+    C.folder = os.path.join(parent,'.test')
+    C.slmfile= os.path.join(parent,'.test','slm.nc')
+    C.head = 'test'
+    C.reso = 25
+    C.area = 500
+    C.monmean = os.path.join(parent,'.test','monmean.nc')
+    C.erase = False
+    C.scale = 5
+    C.lon = 'lon'
+    C.lat = 'lat'
+    C.time = 'time'
+    C.units = 'mm/3h'
+    C.name = 'Herrmann Axt'
+    C.institution = 'Ministry of non-sense'
+    fyear=datetime(1998,1,1)
+    lyear=datetime(1998,1,1)
+    targetfile = os.path.join(parent,'.test',C.head+'Pattern-1998_01_01.nc')
+    main(C,fyear,lyear)
+    lsp = np.mean(nc(targetfile).variables['lsp'][:],axis=(1,2))
+    must = np.array([0.01885422,0.00503601,0.02036453,0.12455902,0.12199646,\
+            0.09371933,0.0194307,0.02259445])
+    error = (np.fabs(1 - lsp/must))*100
+    os.remove(targetfile)
+    if error.all() < 5:
+        return "Test successful"
+    else:
+        return "Accuracy test not passed"
+if __name__== "__main__":
+    helpstring='''Pattern v1.0 Martin Bergemann 14 Jan 2015
+    Copyrith (c) 2013 through 2015, Martin Bergemann
+    submit comes with ABSOLUTELY NO WARRANTY; for details type Pattern -w
+
+
+
+    Usage:
+    Pattern DATE1 DATE2 [config]
+
+
+    Options:
+           config: if an threshold-ensemble should be created the the config code
+                     for the threshold setup that is defined in the setup file in
+                     the source code directory. Multiple configurations are
+                     seperated with , (--config=config01,config02,...,configNN)
+                     default is None
+          -w:        print the copying policy
+
+          --test : run a test configuration to check for working code
+
+    Dates:
+          The dates representing the start and end dates for the pattern
+          recognition the format of the dates must be YYYY-MM-DD
+
+    Example:
+        The comand
+        Pattern 1998-01-01 2012-01-01 config01
+        Pattern recognition as ensemble for the threshold setup config01 
+        and the first date of 01.Jan 98 and the last date of 01.Jan 2012
+    '''
+
+    def writeSetup(file,string):
+        setup = open('setup','r+')
+        tmp=setup.readlines()
+        del tmp
+        setup.write(string)
+        setup.close()
+    #Read the Config file
+    if '-w' in sys.argv[:] or '--w' in sys.argv[:]:
+        l=open('LICENSE').read().replace('XXX','Pattern')
+        sys.stdout.flush()
+        sys.stdout.write(l+'\n')
+        sys.exit()
+    if '--test' in sys.argv[:] or '-test' in sys.argv[:]:
+        sys.stdout.write('Running test ... \n')
+        sys.exit(runtest())
+
+    try:
+        fyear = datetime.strptime(sys.argv[1],'%Y-%m-%d')
+        lyear = datetime.strptime(sys.argv[2],'%Y-%m-%d')
+    except IndexError,ValueError:
+        sys.stdout.write(helpstring+'\n')
+        sys.exit()
+    try:
+        conf = sys.argv[3]
+    except IndexError:
+        conf = None
+    #Get the working dir
+    setup = os.path.join(os.path.dirname(__file__),'setup')
+    setup=open(setup).readlines()[5:]
+    global C
+    C=Config(os.path.join(os.path.dirname(__file__),'config'))
+    if C.ensemble or type(conf) != type(None):
+        for l in setup:
+            name,perc,ecce,beam, = l.strip('\n').split('|')[:-1]
+            if name == conf.lower():
+                ecce = float(ecce)
+                perc = int(perc)
+                beam = int(beam)
+                Conf = name.replace('conf','Conf')
+                break
+        C.ecce = ecce
+        C.perc = perc
+        C.beam = beam
+        if 'config' in C.targetdir.lower():
+            C.targetdir = C.targetdir.replace('ConfigXX',Conf)
+        else:
+            C.targetdir = os.path.join(C.targetdir,Conf)
+    main(C,fyear,lyear)
+    sys.stdout.flush()
+    sys.stdout.write('Done with recognition job')
