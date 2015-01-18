@@ -88,7 +88,7 @@ def recog(coast,lat,lon,unit,geo,thresh=0,perc=None,product='Cmorph'\
     target=nc(target,'w',format='NETCDF4',diskless=True,persist=True)
     target.format='NETCDF4'
     target.insitution=C.institution
-    target.created=C.name
+    target.author=C.name
     target.source='Pattern Detection on '+product+'-Data'
     
     ttmp,llat,llon=len(f.dimensions[C.time]),len(f.dimensions[C.lat]),\
