@@ -132,7 +132,7 @@ Running in the single mode
 If you want to run the pattern recognition in single processing mode simply run
 the Pattern script with the following command line options::
 
- Pattern FirstDate LastDate configXX
+ python Pattern FirstDate LastDate configXX
 
 Where FirstDate is the starting data and LastData the last date. Note that the 
 dates have to be in YYYY-MM-DD format. 
@@ -147,8 +147,8 @@ targetdir string.
 
 Examples::
 
-   1) Pattern 1998-01-01 2012-12-31 config13
-   2) Pattern 1998-01-01 2012-12-31
+   1) python Pattern 1998-01-01 2012-12-31 config13
+   2) python Pattern 1998-01-01 2012-12-31
 
 1) Run the pattern recognition between 01. Jan 1998 and 31. Dec 2012 for threshold
 setup ``config13`` as defined in the ``setup`` file. 
@@ -157,7 +157,7 @@ setup ``config13`` as defined in the ``setup`` file.
 
 For more information run::
    
-   Pattern --help
+   python Pattern --help
 
 Running in paralell mode (PBS)
 ------------------------------
@@ -172,19 +172,19 @@ In general there are two scenarios:
 If you choose to create a threshold ensemble and want to distribute the jobs
 simply run::
 
-   submit --config=config01,config02,...,configNN FirstDate LastDate
+   python submit --config=config01,config02,...,configNN FirstDate LastDate
 
 If you don't want to create a threshold ensemble but yet want to send the job 
 to a Linux cluster simply run::
 
-   submit FirstDate LastDate
+   python submit FirstDate LastDate
 
 Note the FirstDate and LastDate have the same meaning and format as in running
 in single mode
 
 Please type::
 
-   submit --help
+   python submit --help
 
 to get more info like the maximum number of jobs that are submitted to the 
 linux cluster.
@@ -202,7 +202,7 @@ Some fake rain data with a land-sea mask is comes with the code. The data is
 stored in .test in this directory. If you want to test the pattern recognition
 simply run::
 
-   Pattern --test
+   python Pattern --test
 
 
 Contributing
