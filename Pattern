@@ -88,7 +88,7 @@ def recog(coast,lat,lon,unit,geo,thresh=0,perc=None,product='Cmorph'\
     target=nc(target,'w',format='NETCDF4',diskless=True,persist=True)
     target.format='NETCDF4'
     target.insitution=C.institution
-    target.created=C.name
+    target.author=C.name
     target.source='Pattern Detection on '+product+'-Data'
     
     ttmp,llat,llon=len(f.dimensions[C.time]),len(f.dimensions[C.lat]),\
@@ -275,13 +275,13 @@ def runtest():
     C.ecce=0.5
     C.perc=0.5
     C.beam=5
-    C.targetdir=os.path.join(parent,'.test')
-    C.folder = os.path.join(parent,'.test')
-    C.slmfile= os.path.join(parent,'.test','slm.nc')
+    C.targetdir=os.path.join(parent,'test')
+    C.folder = os.path.join(parent,'test')
+    C.slmfile= os.path.join(parent,'test','slm.nc')
     C.head = 'test'
     C.reso = 25
     C.area = 500
-    C.monmean = os.path.join(parent,'.test','monmean.nc')
+    C.monmean = os.path.join(parent,'test','monmean.nc')
     C.erase = False
     C.scale = 5
     C.lon = 'lon'
@@ -292,13 +292,13 @@ def runtest():
     C.institution = 'Ministry of non-sense'
     fyear=datetime(1998,1,1)
     lyear=datetime(1998,1,1)
-    targetfile = os.path.join(parent,'.test',C.head+'Pattern-1998_01_01.nc')
+    targetfile = os.path.join(parent,'test',C.head+'Pattern-1998_01_01.nc')
     main(C,fyear,lyear)
     lsp = np.mean(nc(targetfile).variables['lsp'][:],axis=(1,2))
     must = np.array([0.01885422,0.00503601,0.02036453,0.12455902,0.12199646,\
             0.09371933,0.0194307,0.02259445])
     error = (np.fabs(1 - lsp/must))*100
-    os.remove(targetfile)
+    #os.remove(targetfile)
     if error.all() < 5:
         return "Test successful"
     else:
