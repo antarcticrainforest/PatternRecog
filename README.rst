@@ -5,8 +5,8 @@ This repository contains source-code for the recognition of coastal rainfall
 project.
 
 For more details, see the scientific publication 
-`Global recognition and analysis of coastline associated rainfall using objective pattern recognition
-<http://arxiv.org/abs/1501.06265>`_.
+`Global detection and analysis of coastline associated rainfall using objective pattern recognition
+<http://arxiv.org/abs/1501.06265> (arXiv:1501.06265)`_.
 
 It includes these modules and configuration files:
 
