@@ -6,7 +6,7 @@ project.
 
 For more details, see the scientific publication 
 `Global recognition and analysis of coastline associated rainfall using objective pattern recognition
-<doi://XXXXX>`_.
+<http://arxiv.org/abs/1501.06265>`_.
 
 It includes these modules and configuration files:
 
