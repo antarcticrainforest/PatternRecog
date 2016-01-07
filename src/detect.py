@@ -20,9 +20,9 @@ def coastline(data,smooth_radius=2.5):
         smooth_radius = sigma-value for the canny algorithm
         data= the slm array
     """
-    from skimage import filter
+    from skimage.feature import canny
     from skimage.morphology import convex_hull_image
-    return filter.canny(data, sigma=smooth_radius).astype(np.int8)
+    return canny(data, sigma=smooth_radius).astype(np.int8)
 
 if __name__ == "__main__":
     f='/Users/bergem/Data/test/Maritim.nc'
